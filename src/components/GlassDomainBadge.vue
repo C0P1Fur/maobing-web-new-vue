@@ -6,7 +6,7 @@
 .glass-domain-badge {
   position: fixed;
   bottom: 24px;
-  left: 24px;
+  right: 24px;
   z-index: 100;
   padding: 12px 20px;
   background: rgba(255, 255, 255, 0.12);
@@ -29,6 +29,6 @@
 }
 
 @media (max-width: 768px) {
-  .glass-domain-badge { bottom: 12px; left: 12px; font-size: 0.7rem; }
+  .glass-domain-badge { bottom: 12px; right: 12px; font-size: 0.7rem; }
 }
 </style>

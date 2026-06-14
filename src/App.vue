@@ -11,6 +11,7 @@ import HeroSection from '@/scene/HeroSection.vue'
 import FriendLinksSection from '@/scene/FriendLinksSection.vue'
 import AppFooter from '@/components/AppFooter.vue'
 import GlassDomainBadge from '@/components/GlassDomainBadge.vue'
+import LikeButton from '@/components/LikeButton.vue'
 import { useTheme } from '@/composables/useTheme.js'
 
 const bootComplete = ref(false)
@@ -64,6 +65,8 @@ onUnmounted(() => {
   <RippleCanvas ref="rippleRef" />
   <ParticleCanvas />
   <HamburgerMenu />
+  <!-- <ThemeToggle @trigger-ripple="onTriggerRipple" /> 暂时去掉不要 -->
+  <LikeButton />
   <HeroSection />
   <FriendLinksSection />
   <AppFooter />

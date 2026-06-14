@@ -265,7 +265,7 @@ html[data-theme="light"] .hero-avatar-ring text {
   .friend-links-grid {
     grid-template-columns: 1fr;
   }
-  .glass-domain-badge { bottom: 12px; left: 12px; font-size: 0.7rem; }
+  .glass-domain-badge { bottom: 12px; right: 12px; font-size: 0.7rem; }
 }
 
 @media (max-width: 480px) {
