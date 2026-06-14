@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaoBing's sanctuary | 猫冰的避难所</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="./src/MaoBings-head.png">
+<style>
+/* ========================================
+   DESIGN TOKENS
+   ======================================== */
+:root {
+  --bg-deep: #0a0a14;
+  --bg-surface: #0f0f1e;
+  --bg-card: rgba(30, 30, 55, 0.7);
+  --royal-blue: #4169E1;
+  --royal-blue-glow: rgba(65, 105, 225, 0.4);
+  --lemon-yellow: #FFD700;
+  --lemon-yellow-glow: rgba(255, 215, 0, 0.3);
+  --text-primary: #e0e0f0;
+  --text-secondary: #8888aa;
+  --text-dim: #555577;
+  --glass-bg: rgba(35, 35, 65, 0.82);
+  --glass-border: rgba(65, 105, 225, 0.28);
+  --glass-border-hover: rgba(65, 105, 225, 0.5);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Space Grotesk', sans-serif;
+  --font-general: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --space-unit: 8px;
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   RESET & BASE
+   ======================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* 页面滚动磁吸容器：y轴强制捕捉 + 平滑过渡 + 阻力死区 */
+html {
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+  font-size: 16px;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ---- Custom Cursor ----
+   To replace with your own cursor images:
+     src/cursor-default.png  →  default (not pressing)
+     src/cursor-pressed.png  →  while mouse button is held down
+   Use 32x32 (or smaller) PNG for best browser compatibility.
+   Hotspot at (1,1) = click point relative to image top-left. ---- */
+html {
+  cursor: url('src/cursor-default.png') 1 1, auto;
+}
+
+html.cursor-pressed,
+html.cursor-pressed * {
+  cursor: url('src/cursor-pressed.png') 1 1, auto !important;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--royal-blue); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--lemon-yellow); }
+
+::selection {
+  background: var(--royal-blue);
+  color: #fff;
+}
+
+a { color: var(--royal-blue); text-decoration: none; transition: color var(--transition-fast); }
+a:hover { color: var(--lemon-yellow); }
+
+/* ========================================
+   3D GRID BACKGROUND CANVAS
+   ======================================== */
+#grid-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ========================================
+   SCAN LINE OVERLAY
+   ======================================== */
+.scanlines {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+
+/* ========================================
+   SECTION COMMONS
+   ======================================== */
+/* 通用子页面：强制占满视口，绑定磁吸对齐 + 锁定 */
+.section {
+  position: relative;
+  z-index: 2;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 32px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--royal-blue);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.section-title {
+  font-family: var(--font-mono);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 700;
+  margin-bottom: 48px;
+  text-align: center;
+  position: relative;
+}
+
+
+/* ========================================
+   HERO / HOMEPAGE (Section 1)
+   ======================================== */
+/* 首屏：强制占满视口，绑定磁吸捕捉点 */
+.hero {
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  padding: 80px 72px;
+  gap: 140px;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  max-width: 720px;
+  z-index: 3;
+  text-align: left;
+}
+
+/* ========================================
+   TERMINAL WINDOW
+   ======================================== */
+.terminal-window {
+  width: 720px;
+  max-width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(65, 105, 225, 0.18);
+  background: rgba(14, 14, 22, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(65, 105, 225, 0.06) inset,
+    0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  overflow: hidden;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  background: rgba(10, 10, 18, 0.55);
+  border-bottom: 1px solid rgba(65, 105, 225, 0.10);
+  gap: 12px;
+  user-select: none;
+}
+
+.terminal-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.terminal-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.terminal-dot.dot-red    { background: #ff5f56; box-shadow: 0 0 4px rgba(255,95,86,0.35); }
+.terminal-dot.dot-yellow { background: #ffbd2e; box-shadow: 0 0 4px rgba(255,189,46,0.35); }
+.terminal-dot.dot-green  { background: #27c93f; box-shadow: 0 0 4px rgba(39,201,63,0.35); }
+
+.terminal-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.terminal-body {
+  padding: 28px 52px;
+}
+
+.hero-text-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hero-text-container:hover {
+  transform: scale(1.06);
+}
+
+.hero-line {
+  font-family: var(--font-mono);
+  font-size: clamp(3.2rem, 6.5vw, 5.6rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  min-height: 1.15em;
+  position: relative;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  animation: textBreatheIdle 4s ease-in-out infinite;
+}
+
+.hero-line.secondary {
+  font-size: clamp(1.7rem, 3.3vw, 2.4rem);
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: -0.5px;
+  animation: textBreatheIdle 4s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+/* Active breathing on hover */
+.hero-text-container:hover .hero-line {
+  animation: textBreatheActive 0.75s ease-in-out infinite;
+}
+
+.hero-text-container:hover .hero-line.secondary {
+  animation: textBreatheActive 0.75s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+.cursor {
+  display: inline-block;
+  width: 4px;
+  height: 0.85em;
+  background: #999;
+  margin-left: 4px;
+  vertical-align: text-bottom;
+  animation: cursor-blink 1.2s steps(2) infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor.hidden { opacity: 0; animation: none; }
+
+.hero-jump {
+  animation: heroJump 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+@keyframes heroJump {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.hero-subtitle {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  margin-top: 8px;
+  opacity: 0;
+  animation: fadeInUp 0.6s 2s forwards;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes textBreatheIdle {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.01); }
+}
+
+@keyframes textBreatheActive {
+  0%, 100% { transform: scale(0.985); }
+  50%      { transform: scale(1.025); }
+}
+
+/* Avatar wrapper — contains ring + frame */
+.hero-avatar-wrapper {
+  flex: 0 0 auto;
+  position: relative;
+  width: clamp(200px, 26vw, 320px);
+  height: clamp(200px, 26vw, 320px);
+  z-index: 3;
+  top: -36px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: url('src/cursor-default.png') 1 1, pointer;
+}
+
+/* Hover & press scale handled by JS spring physics */
+
+/* Particle canvas overlay — GPU layer, no pointer interference */
+#particle-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 999;
+  pointer-events: none;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Avatar hover tooltip — follows cursor */
+.avatar-tooltip {
+  position: fixed;
+  padding: 6px 16px;
+  background: rgba(0, 0, 0, 0.84);
+  color: #ccc;
+  font-family: var(--font-general);
+  font-weight: 550;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  transform: translate(12px, -12px);
+}
+
+.avatar-tooltip.visible {
+  opacity: 1;
+}
+
+/* Circular text ring — breather wrapper (scale) */
+.hero-avatar-ring-breathe {
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 80px);
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+  animation: ringBreatheIdle 4s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.hero-avatar-wrapper:hover .hero-avatar-ring-breathe {
+  animation: ringBreatheActive 0.75s ease-in-out infinite;
+}
+
+@keyframes ringBreatheIdle {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+@keyframes ringBreatheActive {
+  0%, 100% { transform: scale(0.96); }
+  50%      { transform: scale(1.05); }
+}
+
+/* Circular text ring — SVG (rotation) */
+.hero-avatar-ring {
+  width: 100%;
+  height: 100%;
+  animation: ringTextSpin 15s linear infinite;
+  overflow: visible;
+}
+
+@keyframes ringTextSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Avatar frame — frosted glass */
+.hero-avatar-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--glass-border-hover);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 0 40px var(--royal-blue-glow),
+    0 0 80px rgba(65, 105, 225, 0.12),
+    inset 0 0 30px rgba(65, 105, 225, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+  overflow: hidden;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+
+.hero-avatar-placeholder {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+  user-select: none;
+}
+
+.hero-avatar-placeholder .icon {
+  display: block;
+  font-size: 2.4rem;
+  margin-bottom: 6px;
+}
+
+.hero-avatar-frame::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px dashed rgba(65, 105, 225, 0.2);
+  animation: ringRotate 20s linear infinite;
+}
+
+@keyframes ringRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.hero-scroll-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: #999;
+  letter-spacing: 3px;
+  animation: floatDown 2s ease-in-out infinite;
+  cursor: url('src/cursor-default.png') 1 1, pointer;
+  z-index: 3;
+}
+
+.hero-scroll-hint::after {
+  content: '\25BC';
+  display: block;
+  margin: 4px auto 0;
+  text-align: center;
+  color: #999;
+  font-size: 0.7rem;
+  animation: scrollPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes floatDown {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.6; }
+  50% { transform: translateX(-50%) translateY(10px); opacity: 1; }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+
+/* ========================================
+   FRIEND LINKS (Section 2) - Cascade
+   ======================================== */
+.friend-links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 1000px;
+}
+
+.friend-link-card {
+  padding: 24px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all var(--transition-fast);
+  cursor: url('src/cursor-default.png') 1 1, pointer;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.friend-link-card.visible {
+  animation: cascadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes cascadeIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.friend-link-card:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 4px 24px var(--royal-blue-glow);
+  transform: translateY(-4px);
+}
+
+.friend-link-card:hover .friend-link-arrow {
+  transform: translateX(4px);
+  color: var(--lemon-yellow);
+}
+
+.friend-link-name {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.friend-link-desc {
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.friend-link-arrow {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--royal-blue);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+.footer {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 48px 32px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.footer-text {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.footer-text .accent { color: var(--royal-blue); }
+
+/* ========================================
+   GLASSMORPHISM ID CARD (floating)
+   ======================================== */
+
+.glass-domain-badge {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 100;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  user-select: all;
+}
+
+.glass-domain-badge span {
+  background-image: linear-gradient(90deg, #ff0000, #ff8800, #ffdd00, #00cc44, #0099ff, #6633ff, #ff00aa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+  .hero-decoration { display: none; }
+  .hero { flex-direction: column; padding: 100px 24px 60px; gap: 32px; }
+  .hero-left { max-width: 100%; align-items: center; text-align: center; }
+  .hero-line { font-size: clamp(2rem, 8vw, 3.2rem) !important; }
+  .hero-line.secondary { font-size: clamp(1.2rem, 5vw, 1.6rem) !important; }
+  .hero-avatar-wrapper { width: 200px; height: 200px; }
+  .hero-subtitle { text-align: center; }
+
+  .friend-links-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .glass-domain-badge { bottom: 12px; left: 12px; font-size: 0.7rem; }
+  .theme-toggle-btn { top: 16px; right: 16px; width: 38px; height: 38px; }
+  .theme-toggle-btn .icon-sun,
+  .theme-toggle-btn .icon-moon { width: 17px; height: 17px; }
+}
+
+@media (max-width: 480px) {
+  .section { padding: 60px 16px; }
+}
+/* ========================================
+   HAMBURGER MENU BUTTON
+   ======================================== */
+.hamburger {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 1001;
+  width: 36px;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: url('src/cursor-default.png') 1 1, pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hamburger-line {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transform-origin: center;
+  transition: transform 0.35s cubic-bezier(0.68, -0.55, 0.27, 1.55),
+              opacity 0.25s ease;
+}
+
+.hamburger.open .hamburger-line:nth-child(1) {
+  transform: translateY(13px) rotate(45deg);
+}
+
+.hamburger.open .hamburger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hamburger.open .hamburger-line:nth-child(3) {
+  transform: translateY(-13px) rotate(-45deg);
+}
+
+.hamburger:hover .hamburger-line {
+  background: var(--lemon-yellow);
+  box-shadow: 0 0 8px var(--lemon-yellow-glow);
+}
+
+/* ========================================
+   SIDEBAR OVERLAY
+   ======================================== */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.sidebar-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ========================================
+   SIDEBAR NAVIGATION
+   ======================================== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  width: 300px;
+  height: 100vh;
+  background: rgba(14, 14, 26, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid var(--glass-border);
+  box-shadow: 4px 0 40px rgba(0, 0, 0, 0.5);
+  transform: translateX(-100%);
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 100px 40px 40px;
+  overflow-y: auto;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-brand {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.sidebar-brand .accent {
+  color: var(--royal-blue);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  cursor: url('src/cursor-default.png') 1 1, pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  position: relative;
+}
+
+.sidebar-link::before {
+  content: '';
+  font-family: var(--font-mono);
+  color: var(--lemon-yellow);
+  font-size: 0.85rem;
+  width: 0;
+  overflow: hidden;
+  transition: width 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.sidebar-link:hover {
+  color: var(--text-primary);
+  background: rgba(65, 105, 225, 0.12);
+  border-color: var(--glass-border);
+}
+
+.sidebar-link:hover::before {
+  content: '>';
+  width: 12px;
+  opacity: 1;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--glass-border);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+/* ========================================
+   THEME TOGGLE BUTTON — 右上角毛玻璃日月切换按钮
+   ======================================== */
+.theme-toggle-btn {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1002;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: url('src/cursor-default.png') 1 1, pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  overflow: visible;
+  color: #e8e8f0;
+  will-change: transform;
+  /* 弹簧缩放由 JS 驱动，CSS 仅提供基础样式 */
+}
+
+.theme-toggle-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 28px rgba(65, 105, 225, 0.3);
+}
+
+/* 日月图标 —— 绝对定位居中，通过 opacity/transform 切换 */
+.theme-toggle-btn .icon-sun,
+.theme-toggle-btn .icon-moon {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  transition: opacity 0.35s ease,
+              transform 0.45s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+/* 暗色模式默认：显示太阳图标（暗示可切到亮色） */
+.theme-toggle-btn .icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+.theme-toggle-btn .icon-moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.3);
+}
+
+/* 亮色模式：显示月亮图标（暗示可切回暗色） */
+html[data-theme="light"] .theme-toggle-btn .icon-sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.3);
+}
+html[data-theme="light"] .theme-toggle-btn .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* 亮色模式下按钮配色微调 */
+html[data-theme="light"] .theme-toggle-btn {
+  color: #555;
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+html[data-theme="light"] .theme-toggle-btn:hover {
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.12);
+}
+
+/* ========================================
+   THEME RIPPLE OVERLAY — 全屏圆形波纹转场层（Canvas 实现）
+   层级说明：位于 grid-canvas(z:0) 之上、scanlines(z:1) 之上，
+            内容板块(z:2+) 之下，确保只影响背景视觉。
+   使用 Canvas + rAF 替代 CSS clip-path transition，
+   避免浏览器合成器导致的闪烁问题。
+   ======================================== */
+#ripple-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 亮色模式底层背景色覆盖 */
+html[data-theme="light"] body {
+  background: #f0f0f5;
+}
+
+/* 亮色模式：汉堡菜单按钮线条改为深色 */
+html[data-theme="light"] .hamburger-line {
+  background: #444;
+}
+
+/* 亮色模式：左下角玻璃域名徽标适配 */
+html[data-theme="light"] .glass-domain-badge {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* 亮色模式：头像环绕文字从白色切换为深色（★ 保持蓝色不变） */
+html[data-theme="light"] .hero-avatar-ring text {
+  fill: #333;
+}
+
+/* ========================================
+   BOOT LOADING SCREEN — 全屏终端启动加载
+   纯黑终端风格，模拟系统引导过程，
+   加载完成后淡出滑走并从 DOM 中彻底销毁。
+   ======================================== */
+#boot-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 9999;
+  background: #0d0e15;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 退出动画：向上滑出 + 淡出 */
+#boot-screen.exit {
+  animation: bootSlideOut 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes bootSlideOut {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-100vh); }
+}
+
+/* ---- macOS 风格终端框架 ---- */
+.boot-terminal {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.92);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 终端标题栏（红黄绿圆点 + 标题） */
+.boot-terminal-header {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  background: rgba(30, 30, 40, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 10px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.boot-terminal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.boot-terminal-dot.red    { background: #ff5f56; }
+.boot-terminal-dot.yellow { background: #ffbd2e; }
+.boot-terminal-dot.green  { background: #27c93f; }
+
+.boot-terminal-label {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: #777;
+  letter-spacing: 0.3px;
+  margin-right: 50px; /* 视觉居中补偿 */
+}
+
+/* 终端内容区 */
+.boot-terminal-body {
+  flex: 1;
+  padding: 18px 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+/* ---- 加载页居中 Logo（呼吸 + 扫光） ---- */
+.boot-logo-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.boot-logo-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 8px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.boot-logo {
+  display: block;
+  width: 300px;
+  height: auto;
+  padding: 20px;
+  opacity: 0.55;
+  border-radius: 8px;
+  animation: logoBreathe 3s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+/* 呼吸缩放 + 光晕脉冲 */
+@keyframes logoBreathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+/* ---- 日志 & 进度条（在终端体内） ---- */
+#boot-logs {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  padding: 10px 14px;
+  width: fit-content;
+}
+
+#boot-logs::-webkit-scrollbar { width: 4px; }
+#boot-logs::-webkit-scrollbar-track { background: transparent; }
+#boot-logs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* 每一行启动日志淡入 */
+.boot-log-line {
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(18px);
+  animation: bootLineIn 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes bootLineIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 日志颜色分类 */
+.boot-log-line.info    { color: #00cc44; }
+.boot-log-line.warn    { color: #ffbd2e; }
+.boot-log-line.error   { color: #ff5f56; }
+.boot-log-line.success { color: #27c93f; font-weight: 700; }
+
+/* 底部进度条区域 */
+#boot-progress {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #ffbd2e;
+  white-space: nowrap;
+  font-size: 1.05rem;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+}
+
+/* 闪烁的下划线光标 */
+.boot-cursor {
+  display: inline-block;
+  color: #00cc44;
+  animation: bootCursorBlink 0.7s step-end infinite;
+}
+
+@keyframes bootCursorBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ========================================
+     BOOT LOADING SCREEN — 全屏终端启动加载
+     启动完成后自动淡出并从 DOM 中移除
+     ======================================== -->
+<div id="boot-screen">
+  <div class="boot-terminal">
+    <div class="boot-terminal-header">
+      <div class="boot-terminal-dot red"></div>
+      <div class="boot-terminal-dot yellow"></div>
+      <div class="boot-terminal-dot green"></div>
+      <span class="boot-terminal-label">maobing@sanctuary — bash — 80×24</span>
+    </div>
+    <div class="boot-terminal-body">
+      <div id="boot-logs"></div>
+      <div id="boot-progress">
+        <span id="boot-progress-bar">[░░░░░░░░░░░░░░░░░░░░]</span>&nbsp;
+        <span id="boot-progress-pct">0%</span>
+        <span class="boot-cursor">&#9608;</span>
+      </div>
+      <div class="boot-logo-area">
+        <div class="boot-logo-wrapper">
+          <img class="boot-logo" src="./src/maobing-logo-flat.png" alt="MaoBing Logo">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HAMBURGER MENU BUTTON -->
+<button class="hamburger" id="hamburgerBtn" aria-label="Toggle navigation menu">
+  <span class="hamburger-line"></span>
+  <span class="hamburger-line"></span>
+  <span class="hamburger-line"></span>
+</button>
+
+<!-- THEME TOGGLE BUTTON -->
+<button class="theme-toggle-btn" id="themeToggleBtn" aria-label="切换日间/夜间模式">
+  <!-- 太阳图标（暗色模式下显示，点击切换到亮色） -->
+  <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </svg>
+  <!-- 月亮图标（亮色模式下显示，点击切换到暗色） -->
+  <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+</button>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- SIDEBAR NAVIGATION -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">MAOBING<span class="accent">.TOP</span></div>
+  <nav class="sidebar-nav">
+    <a class="sidebar-link active" href="#home" data-nav>
+      <span>Home</span>
+    </a>
+    <a class="sidebar-link" href="#friends" data-nav>
+      <span>Friends</span>
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    &copy; 2026 MAOBING // v1.0.0
+  </div>
+</aside>
+
+<!-- 3D GRID BACKGROUND -->
+<canvas id="grid-canvas"></canvas>
+<div class="scanlines"></div>
+
+<!-- THEME RIPPLE LAYER — Canvas 全屏圆形波纹转场 -->
+<canvas id="ripple-canvas"></canvas>
+
+<!-- PARTICLE CANVAS for avatar click burst -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- SECTION 1: HERO -->
+<section class="hero" id="home">
+
+  <div class="hero-left">
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="terminal-dots">
+          <span class="terminal-dot dot-red"></span>
+          <span class="terminal-dot dot-yellow"></span>
+          <span class="terminal-dot dot-green"></span>
+        </div>
+        <span class="terminal-label">bash — maobing@terminal ~</span>
+      </div>
+      <div class="terminal-body">
+        <div class="hero-text-container" id="heroText">
+          <div class="hero-line" id="heroLine1"></div>
+          <div class="hero-line secondary" id="heroLine2"></div>
+        </div>
+        <p class="hero-subtitle">&gt; 🐱🧊MaoBing, developer, youtuber, furry and more!</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="avatar-tooltip" id="avatarTooltip">点一下试试~</div>
+  <div class="hero-avatar-wrapper">
+    <div class="hero-avatar-ring-breathe">
+      <svg class="hero-avatar-ring" viewBox="0 0 200 200">
+          <defs>
+            <path id="textCircle" d="M 100 8 A 92 92 0 0 1 100 192 A 92 92 0 0 1 100 8" />
+          </defs>
+          <text font-family="'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size= "12" fill="#ffffff"
+                font-weight="600" letter-spacing="2" text-anchor="middle">
+            <textPath href="#textCircle" startOffset="25%">
+              MAOBING <tspan fill="#4169E1">&#128049;</tspan>
+              猫冰 <tspan fill="#4169E1">&#129482;</tspan>
+              MAOBING <tspan fill="#4169E1">&#128049;</tspan>
+              猫冰 <tspan fill="#4169E1">&#129482;</tspan>
+              MAOBING <tspan fill="#4169E1">&#128049;</tspan>
+              猫冰 <tspan fill="#4169E1">&#129482;</tspan>
+              MAOBING <tspan fill="#4169E1">&#128049;</tspan>
+              猫冰 
+            </textPath>
+      </svg>
+    </div>
+    <div class="hero-avatar-frame">
+      <div class="hero-avatar-placeholder">
+        <img src="src/q版猫冰无背景.png" alt="猫冰头像" class="icon" style="width: 100%; height: auto;"></img>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-scroll-hint" onclick="window.scrollTo({top:document.getElementById('friends').offsetTop,behavior:'smooth'})">
+    [ scroll down ]
+  </div>
+</section>
+
+<!-- SECTION 2: FRIEND LINKS -->
+<section class="section" id="friends">
+  <div class="section-label">Friends</div>
+  <h2 class="section-title">links &amp; friends</h2>
+
+  <div class="friend-links-grid" id="friendLinksGrid"></div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p class="footer-text">Designed &amp; Built with <span class="accent">&lt;/&gt;</span> by Maobing &mdash; &copy; 2026</p>
+</footer>
+
+<div class="glass-domain-badge"><span>maobing.top</span></div>
+
+<!-- SCRIPTS -->
+<script>
+/* ========================================
+   CYBER GRID MATRIX BACKGROUND
+   - 深蓝色暗黑模式 + 几何矩阵网格
+   - 无限匀速横向侧向滚动
+   - 鼠标悬浮局部塌陷/凹陷（径向衰减扭曲 + 弹性回弹）
+   - requestAnimationFrame 60FPS
+   ======================================== */
+(function() {
+  const canvas = document.getElementById('grid-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // ==================== 可调参数 ====================
+  const CELL       = 56;   // 网格单元格大小（px）
+  const RADIUS     = 220;  // 鼠标影响半径（px），超出此范围无变形
+  const MAX_DISP   = 22;   // 鼠标正下方最大位移量（px）
+  const SCROLL_V   = 0.90; // 45°斜向滚动速度（px/帧），越大越快
+  const SPRING     = 0.06; // 弹性回弹力度（越大回弹越快）
+  const DAMPING    = 0.78; // 阻尼系数（0-1，越小衰减越快）
+
+  // ==================== 状态变量 ====================
+  let scrollOffset = 0;           // 横向滚动偏移量
+  let mouseX = -9999, mouseY = -9999;  // 真实鼠标坐标（-9999 表示鼠标不在视口内）
+
+  // “塌陷中心” — 用弹簧阻尼模型追赶鼠标，产生弹性滞后/回弹效果
+  let depX = -9999, depY = -9999;
+  let depVX = 0, depVY = 0;
+
+  // ==================== 斜向平铺图片 ====================
+  // ★ 替换 TILE_IMG_SRC 的值为你想要的图片路径
+  const TILE_IMG_SRC = './src/猫冰头.png'; // ← 改成你的图片路径
+  const TILE_SIZE    = 120;   // 图片显示大小（px）
+  const TILE_SPACING = 6;    // 每隔几个网格格绘制一张（1=每格都画）
+  const TILE_ALPHA   = 0.50; // 图片透明度
+  const TILE_ROT_V   = 0.015; // 图片旋转角速度（弧度/像素滚动）
+
+  let tileImg = null;
+  let tileImgLoaded = false;
+  (function loadTileImage() {
+    tileImg = new Image();
+    tileImg.onload = function() { tileImgLoaded = true; };
+    tileImg.src = TILE_IMG_SRC;
+  })();
+
+  // ==================== Canvas 尺寸 ====================
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ==================== 鼠标追踪 ====================
+  document.addEventListener('mousemove', function(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+  document.addEventListener('mouseleave', function() {
+    mouseX = -9999;
+    mouseY = -9999;
+  });
+
+  // ==================== 计算顶点位移 ====================
+  // 输入：顶点原始坐标 (vx, vy)
+  // 输出：该顶点被“拉向”塌陷中心后的坐标
+  function displace(vx, vy) {
+    var dx = vx - depX;
+    var dy = vy - depY;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist >= RADIUS || dist < 0.001) return { x: vx, y: vy };
+
+    // 二次衰减曲线 — 离鼠标越近拉扯越强
+    var t = 1 - dist / RADIUS;
+    var strength = t * t * MAX_DISP;
+
+    // 向塌陷中心方向拉动顶点
+    var nx = dx / dist;
+    var ny = dy / dist;
+
+    return {
+      x: vx - nx * strength,
+      y: vy - ny * strength
+    };
+  }
+
+  // ==================== 绘制主循环 ====================
+  function draw() {
+    var w = canvas.width;
+    var h = canvas.height;
+
+    // ---- 1. 45°斜向滚动 ----
+    scrollOffset = scrollOffset + SCROLL_V; // 连续累加，避免 % CELL 导致的图片回弹
+
+    // ---- 2. 弹簧阻尼更新塌陷中心 ----
+    // 弹簧力：朝向鼠标位置
+    var fx = (mouseX - depX) * SPRING;
+    var fy = (mouseY - depY) * SPRING;
+    depVX = (depVX + fx) * DAMPING;
+    depVY = (depVY + fy) * DAMPING;
+    depX += depVX;
+    depY += depVY;
+
+    // ---- 3. 清屏：深蓝色背景 ----
+    /* 根据当前主题决定网格背景填充色（暗色=深蓝黑 / 亮色=浅灰白） */
+	    var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+	    ctx.fillStyle = isLight ? '#f0f0f5' : '#060b18';
+    ctx.fillRect(0, 0, w, h);
+
+    // ---- 4. 计算可见网格范围 ----
+    var scrolled = scrollOffset;
+    var col0 = Math.floor(-scrolled / CELL) - 1;
+    var colN = Math.ceil((w - scrolled) / CELL) + 1;
+    var row0 = Math.floor(-scrolled / CELL) - 1;
+    var rowN = Math.ceil((h - scrolled) / CELL) + 1;
+
+    // ---- 5. 预计算所有顶点的位移后坐标 ----
+    // 存入二维稀疏表，供横线/竖线共享
+    var grid = {}; // key: "col,row" → {x, y}
+    for (var c = col0; c <= colN; c++) {
+      for (var r = row0; r <= rowN; r++) {
+        var vx = c * CELL + scrolled;
+        var vy = r * CELL + scrolled;
+        grid[c + ',' + r] = displace(vx, vy);
+      }
+    }
+
+    // ---- 6. 绘制竖线（每列一条折线，穿过各行顶点） ----
+    for (var c = col0; c <= colN; c++) {
+      ctx.beginPath();
+      var first = true;
+      for (var r = row0; r <= rowN; r++) {
+        var pt = grid[c + ',' + r];
+        if (first) { ctx.moveTo(pt.x, pt.y); first = false; }
+        else       { ctx.lineTo(pt.x, pt.y); }
+      }
+      ctx.strokeStyle = 'rgba(65, 105, 225, 0.24)';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+    }
+
+    // ---- 7. 绘制横线（每行一条折线，穿过各列顶点） ----
+    for (var r = row0; r <= rowN; r++) {
+      ctx.beginPath();
+      var first = true;
+      for (var c = col0; c <= colN; c++) {
+        var pt = grid[c + ',' + r];
+        if (first) { ctx.moveTo(pt.x, pt.y); first = false; }
+        else       { ctx.lineTo(pt.x, pt.y); }
+      }
+      ctx.strokeStyle = 'rgba(65, 105, 225, 0.18)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    // ---- 7.5. 绘制斜向 45° 平铺图片 ----
+    // 对齐起始行列到 TILE_SPACING 的整数倍，防止滚动时图片模式相位漂移
+    if (tileImgLoaded) {
+      ctx.save();
+      ctx.globalAlpha = TILE_ALPHA;
+      var tc0 = Math.ceil(col0 / TILE_SPACING) * TILE_SPACING;
+      var tr0 = Math.ceil(row0 / TILE_SPACING) * TILE_SPACING;
+      for (var c = tc0; c <= colN; c += TILE_SPACING) {
+        for (var r = tr0; r <= rowN; r += TILE_SPACING) {
+          var pt = grid[c + ',' + r];
+          if (!pt) continue;
+          ctx.save();
+          ctx.translate(pt.x, pt.y);
+          ctx.rotate(scrollOffset * TILE_ROT_V); // 旋转角速度
+          ctx.drawImage(tileImg, -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
+
+    // ---- 8. 鼠标附近的网格交点加亮（微光点） ----
+    if (mouseX > -100 && mouseY > -100) {
+      for (var c = col0; c <= colN; c++) {
+        for (var r = row0; r <= rowN; r++) {
+          var pt = grid[c + ',' + r];
+          var dx2 = pt.x - depX;
+          var dy2 = pt.y - depY;
+          var d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+          if (d2 < RADIUS * 0.6) {
+            var alpha2 = (1 - d2 / (RADIUS * 0.6)) * 0.40;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(100, 150, 255, ' + alpha2 + ')';
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    // ---- 9. 全局微弱的中心光晕 ----
+    if (mouseX > -100 && mouseY > -100) {
+      var glow = ctx.createRadialGradient(depX, depY, 0, depX, depY, RADIUS);
+      glow.addColorStop(0, 'rgba(65, 105, 225, 0.08)');
+      glow.addColorStop(0.6, 'rgba(65, 105, 225, 0.02)');
+      glow.addColorStop(1, 'rgba(65, 105, 225, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(depX - RADIUS, depY - RADIUS, RADIUS * 2, RADIUS * 2);
+    }
+
+    // ---- 10. 继续下一帧 ----
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+})();
+
+/* ========================================
+   TYPEWRITER + TEXT CAROUSEL
+   ======================================== */
+(function() {
+  const textPairs = [
+    ['Hello, World.', 'welcome, stranger.'],
+    ['>_ ./maobing.sh', 'meow~'],
+    ['echo "Change the world"', '"with 1s and 0s."'],
+    ['Cat * adorableCat = ', 'new Cat("MaoBing");'],
+    ['Of course!', '-- I play Minecraft'],
+  ];
+
+  const line1El = document.getElementById('heroLine1');
+  const line2El = document.getElementById('heroLine2');
+  let pairIndex = 0;
+  let cursorEl = null;
+  let isTyping = false;
+
+  function createCursor(parent) {
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    parent.appendChild(cursor);
+    return cursor;
+  }
+
+  /* 将光标移动到指定元素末尾（先移除旧光标再创建新光标，始终保证只有一个光标在闪烁） */
+  function moveCursorTo(el) {
+    if (cursorEl) { cursorEl.remove(); cursorEl = null; }
+    cursorEl = createCursor(el);
+  }
+
+  /* 逐字输入 —— 使用 insertBefore 在光标前插入文本节点，保证光标不被销毁 */
+  function typeText(el, text, speed, callback) {
+    var i = 0;
+    el.textContent = '';          // 清空行（此时光标也被清掉）
+    moveCursorTo(el);             // 重新创建光标
+
+    function tick() {
+      if (i < text.length) {
+        var charNode = document.createTextNode(text[i]);
+        el.insertBefore(charNode, cursorEl); // 在光标 <span> 前插入字符
+        i++;
+        var delay = text[i - 1] === ' ' ? speed * 2 : speed + Math.random() * 40;
+        setTimeout(tick, delay);
+      } else {
+        if (callback) callback();
+      }
+    }
+
+    setTimeout(tick, 200);
+  }
+
+  /* 逐字退格删除 —— 删除光标前一个文本节点，保证光标始终存在 */
+  function deleteText(el, speed, callback) {
+    moveCursorTo(el);
+
+    function tick() {
+      var prev = cursorEl.previousSibling;
+      // 只删除文本节点（空格也属于文本节点）
+      if (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent.length > 0) {
+        var text = prev.textContent;
+        prev.textContent = text.substring(0, text.length - 1); // 删最后一个字符
+        if (prev.textContent.length === 0) {
+          el.removeChild(prev); // 文本节点已空则移除
+        }
+        setTimeout(tick, speed + Math.random() * 15);
+      } else {
+        if (callback) callback();
+      }
+    }
+
+    tick();
+  }
+
+  function typePair(pair) {
+    if (isTyping) return;
+    isTyping = true;
+
+    // Jump animation before typing
+    const container = document.getElementById('heroText');
+    container.classList.add('hero-jump');
+    setTimeout(() => container.classList.remove('hero-jump'), 300);
+
+    line1El.textContent = '';
+    line2El.textContent = '';
+
+    // 光标始终跟随当前激活行，流程：打第一行 → 打第二行 → 停顿 → 删第二行 → 删第一行 → 下一组
+    typeText(line1El, pair[0], 60, () => {
+      typeText(line2El, pair[1], 50, () => {
+        setTimeout(() => {
+          deleteText(line2El, 28, () => {
+            deleteText(line1El, 28, () => {
+              isTyping = false;
+              setTimeout(() => {
+                pairIndex = (pairIndex + 1) % textPairs.length;
+                typePair(textPairs[pairIndex]);
+              }, 800);
+            });
+          });
+        }, 2000);
+      });
+    });
+  }
+
+  // Start
+  setTimeout(() => typePair(textPairs[0]), 500);
+})();
+
+/* ========================================
+   FRIEND LINKS - CASCADE ANIMATION
+   ======================================== */
+(function() {
+  const links = [
+    { name: '猫冰', desc: '我是小🐱', url: 'https://maobing.netlify.app/' },
+    { name: '天旭', desc: '神秘小龙虾', url: 'https://lnk.bio/TXsunrise' },
+    { name: '林风', desc: 'AAA电脑维修林师傅', url: 'https://blog.lin-fun.com/' },
+    { name: 'MeTの主页', desc: 'Stay Hungry, Stay Foolish', url: 'https://met6.top/' },
+    { name: '凌蓝', desc: '凌蓝s small online lab', url: 'https://invert-viewer.179.life/' },
+    { name: '渣渣120', desc: '折耳狗~', url: 'https://zhazha120.cn' },
+  ];
+
+  const grid = document.getElementById('friendLinksGrid');
+
+  links.forEach((link, i) => {
+    const el = document.createElement('a');
+    el.className = 'friend-link-card';
+    el.href = link.url;
+    el.style.animationDelay = `${i * 0.1}s`;
+    el.innerHTML = `
+      <div class="friend-link-name">${link.name}</div>
+      <div class="friend-link-desc">${link.desc}</div>
+      <div class="friend-link-arrow">visit &rarr;</div>
+    `;
+    grid.appendChild(el);
+  });
+
+  // Intersection Observer for cascade trigger
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const cards = grid.querySelectorAll('.friend-link-card');
+        cards.forEach((card, i) => {
+          card.style.animationDelay = `${i * 0.1}s`;
+          card.classList.add('visible');
+        });
+      } else {
+        // Reset for re-trigger
+        grid.querySelectorAll('.friend-link-card').forEach(c => c.classList.remove('visible'));
+      }
+    });
+  }, { threshold: 0.2 });
+
+  observer.observe(grid);
+})();
+
+/* ========================================
+   HAMBURGER MENU + SIDEBAR TOGGLE
+   ======================================== */
+(function() {
+  const btn = document.getElementById('hamburgerBtn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const navLinks = sidebar.querySelectorAll('[data-nav]');
+
+  function open() {
+    btn.classList.add('open');
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function close() {
+    btn.classList.remove('open');
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('open')) {
+      close();
+    } else {
+      open();
+    }
+  });
+
+  overlay.addEventListener('click', close);
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) {
+        close();
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }, 400);
+      }
+    });
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && btn.classList.contains('open')) {
+      close();
+    }
+  });
+})();
+
+/* ========================================
+   CUSTOM CURSOR — PRESSED STATE
+   ======================================== */
+(function() {
+  const html = document.documentElement;
+  document.addEventListener('mousedown', () => html.classList.add('cursor-pressed'));
+  document.addEventListener('mouseup', () => html.classList.remove('cursor-pressed'));
+  document.addEventListener('mouseleave', () => html.classList.remove('cursor-pressed'));
+})();
+
+/* ========================================
+   AVATAR TOOLTIP + JELLY BOUNCE + PARTICLE BURST
+   悬浮跟随光标 / 果冻回弹 / "喵~" 烟花粒子
+   ======================================== */
+(function() {
+  const avatar = document.querySelector('.hero-avatar-wrapper');
+  const tooltip = document.getElementById('avatarTooltip');
+  const particleCanvas = document.getElementById('particle-canvas');
+  const pctx = particleCanvas ? particleCanvas.getContext('2d') : null;
+
+  if (!avatar) return;
+
+  // ---- Tooltip: follow cursor ----
+  if (tooltip) {
+    avatar.addEventListener('mousemove', function(e) {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top = e.clientY + 'px';
+    });
+    avatar.addEventListener('mouseenter', function() {
+      tooltip.classList.add('visible');
+    });
+    avatar.addEventListener('mouseleave', function() {
+      tooltip.classList.remove('visible');
+    });
+  }
+
+  // ---- Particle system state ----
+  var particles = [];
+
+  function resizeParticleCanvas() {
+    if (!particleCanvas) return;
+    particleCanvas.width  = window.innerWidth;
+    particleCanvas.height = window.innerHeight;
+  }
+  resizeParticleCanvas();
+  window.addEventListener('resize', resizeParticleCanvas);
+
+  // ---- Physics constants ----
+  var GRAVITY = 0.15;
+  var DAMPING = 0.98;
+  var PARTICLE_COUNT = 8;  // fewer, larger text
+
+  // ---- Spawn particles at ring edge ----
+  function spawnBurst(cx, cy, ringRadius) {
+    var count = PARTICLE_COUNT + Math.floor(Math.random() * 7) - 3; // 12~18 random
+    var colors = ['#ffffff', '#e0e0ff', '#c8d6ff', '#4169E1', '#6b8cff', '#a0b8ff', '#FFD700'];
+
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2;       // 随机 360° 发射角
+      var speed = 3 + Math.random() * 5;              // 随机初速度
+      var vx = Math.cos(angle) * speed;
+      var vy = Math.sin(angle) * speed - 1.5;         // 轻微上偏，模拟烟花
+
+      // Start at ring edge, not center
+      var startX = cx + Math.cos(angle) * ringRadius;
+      var startY = cy + Math.sin(angle) * ringRadius;
+
+      var size = 20 + Math.floor(Math.random() * 12);  // 20~31px
+      particles.push({
+        x: startX,
+        y: startY,
+        vx: vx,
+        vy: vy,
+        fontKey: size + 'px "JetBrains Mono", monospace',
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI * 2,             // 弧度制，避免每帧转换
+        rotSpeed: (Math.random() - 0.5) * 0.105,      // 角速度（弧度/帧）
+        text: Math.random() < 0.5 ? '🧊' : '🐱'
+      });
+    }
+
+    startMasterLoop();
+  }
+
+  // ---- Unified rAF master loop: spring physics + particle render in ONE callback ----
+  var springScale = 1;
+  var springVel = 0;
+  var springTarget = 1;
+  var springActive = false;
+  var SPRING_STIFF = 0.22;
+  var SPRING_DAMP  = 0.75;
+  var masterRaf = null;
+
+  function particleTick() {
+    if (!pctx) return;
+
+    pctx.setTransform(1, 0, 0, 1, 0, 0);
+    pctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+    pctx.textAlign = 'center';
+    pctx.textBaseline = 'middle';
+
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+
+      p.vy += GRAVITY;
+      p.vx *= DAMPING;
+      p.vy *= DAMPING;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.rotSpeed;
+
+      if (p.y > particleCanvas.height + 50 || p.x < -50 || p.x > particleCanvas.width + 50) {
+        particles.splice(i, 1);
+        continue;
+      }
+
+      var cos = Math.cos(p.rot);
+      var sin = Math.sin(p.rot);
+      pctx.setTransform(cos, sin, -sin, cos, p.x, p.y);
+      pctx.font = p.fontKey;
+      pctx.fillStyle = p.color;
+      pctx.fillText(p.text, 0, 0);
+    }
+
+    if (particles.length === 0) {
+      pctx.setTransform(1, 0, 0, 1, 0, 0);
+      pctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+    }
+  }
+
+  function masterStep() {
+    var needsSpring = false;
+    var hasParticles = particles.length > 0;
+
+    if (springActive) {
+      var force = (springTarget - springScale) * SPRING_STIFF;
+      springVel += force;
+      springVel *= SPRING_DAMP;
+      springScale += springVel;
+      avatar.style.transform = 'scale(' + springScale + ')';
+
+      if (Math.abs(springScale - springTarget) < 0.0003 && Math.abs(springVel) < 0.0003) {
+        springScale = springTarget;
+        springVel = 0;
+        avatar.style.transform = 'scale(' + springTarget + ')';
+        springActive = false;
+      } else {
+        needsSpring = true;
+      }
+    }
+
+    if (hasParticles) {
+      particleTick();
+    }
+
+    if (needsSpring || particles.length > 0) {
+      masterRaf = requestAnimationFrame(masterStep);
+    } else {
+      masterRaf = null;
+    }
+  }
+
+  function startMasterLoop() {
+    if (!masterRaf) masterRaf = requestAnimationFrame(masterStep);
+  }
+
+  // ---- Cache avatar position to avoid layout thrashing on click ----
+  var avatarCx = 0, avatarCy = 0, ringRadius = 0;
+
+  function updateAvatarCache() {
+    var rect = avatar.getBoundingClientRect();
+    avatarCx = rect.left + rect.width / 2;
+    avatarCy = rect.top + rect.height / 2;
+    ringRadius = (rect.width + 80) * (92 / 200);
+  }
+  updateAvatarCache();
+  window.addEventListener('scroll', updateAvatarCache, { passive: true });
+  window.addEventListener('resize', updateAvatarCache, { passive: true });
+
+  // Hover
+  avatar.addEventListener('mouseenter', function() {
+    springTarget = 1.15;
+    springActive = true;
+    startMasterLoop();
+  });
+  avatar.addEventListener('mouseleave', function() {
+    springTarget = 1.0;
+    springActive = true;
+    startMasterLoop();
+  });
+
+  // Press: instant compression + particle burst (no reflow, unified rAF)
+  avatar.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    springScale = 0.88;
+    springVel = 0;
+    springTarget = 1.15;
+    springActive = true;
+    avatar.style.transform = 'scale(0.88)';
+    startMasterLoop();
+
+    spawnBurst(avatarCx, avatarCy, ringRadius);
+  });
+
+})();
+
+/* ========================================
+   THEME SWITCHER — 日间/夜间模式 + Canvas 圆形波纹转场 + 弹簧按钮
+
+   波纹原理（Canvas 实现，避免 CSS clip-path 闪烁）：
+     在 #ripple-canvas（z-index:1，位于网格背景与内容之间）上，
+     用 requestAnimationFrame 逐帧绘制从按钮中心向外扩散的实心圆。
+     动画结束先更新主题让 grid-canvas 切换到新背景，再清除波纹画布。
+   弹簧原理：
+     弹簧-阻尼物理模型，requestAnimationFrame 驱动按钮 scale，
+     按下压缩到 0.82→过冲到 1.05→衰减归位，产生 Q 弹手感。
+   ======================================== */
+(function() {
+  const rippleCanvas = document.getElementById('ripple-canvas');
+  const rctx = rippleCanvas.getContext('2d');
+  const btn = document.getElementById('themeToggleBtn');
+
+  /* ---- 状态 ---- */
+  let currentTheme = localStorage.getItem('theme') || 'dark';
+  let isTransitioning = false;
+
+  /* ---- 弹簧物理参数 ---- */
+  let springScale = 1;
+  let springVel = 0;
+  let springTarget = 1;
+  const SPRING_STIFF = 0.28;
+  const SPRING_DAMP  = 0.72;
+  let springRaf = null;
+
+  function springStep() {
+    var force = (springTarget - springScale) * SPRING_STIFF;
+    springVel += force;
+    springVel *= SPRING_DAMP;
+    springScale += springVel;
+    btn.style.transform = 'scale(' + springScale + ')';
+    if (Math.abs(springScale - springTarget) < 0.0005 && Math.abs(springVel) < 0.0005) {
+      btn.style.transform = 'scale(' + springTarget + ')';
+      springScale = springTarget;
+      springVel = 0;
+      springRaf = null;
+      return;
+    }
+    springRaf = requestAnimationFrame(springStep);
+  }
+
+  function startSpring() {
+    if (!springRaf) springRaf = requestAnimationFrame(springStep);
+  }
+
+  /* ---- 按钮弹簧交互 ---- */
+  btn.addEventListener('mouseenter', function() {
+    if (isTransitioning) return;
+    springTarget = 1.08;
+    startSpring();
+  });
+  btn.addEventListener('mouseleave', function() {
+    if (isTransitioning) return;
+    springTarget = 1.0;
+    startSpring();
+  });
+  btn.addEventListener('mousedown', function(e) {
+    if (isTransitioning) return;
+    e.preventDefault();
+    springTarget = 0.82;
+    startSpring();
+  });
+  btn.addEventListener('mouseup', function() {
+    if (isTransitioning) return;
+    springTarget = 1.0;
+    startSpring();
+  });
+  document.addEventListener('mouseup', function() {
+    if (isTransitioning) return;
+    if (springTarget === 0.82) { springTarget = 1.0; startSpring(); }
+  });
+
+  /* ---- 初始化主题 ---- */
+  function applyTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }
+  applyTheme(currentTheme);
+
+  /* ---- Canvas 尺寸 ---- */
+  function resizeRippleCanvas() {
+    rippleCanvas.width  = window.innerWidth;
+    rippleCanvas.height = window.innerHeight;
+  }
+
+  /* ---- Canvas 波纹动画核心 ---- */
+  function startRipple(cx, cy, targetBg, onDone) {
+    var DURATION = 850;            // 动画总时长 (ms)
+    // 计算需要覆盖全屏的最大半径：按钮中心到屏幕四角的最大距离 + 余量
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var corners = [
+      [0, 0], [w, 0], [0, h], [w, h]
+    ];
+    var maxR = 0;
+    for (var i = 0; i < corners.length; i++) {
+      var dx = corners[i][0] - cx;
+      var dy = corners[i][1] - cy;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d > maxR) maxR = d;
+    }
+    maxR = Math.ceil(maxR) + 10; // +10px 安全余量，防止边缘漏出
+
+    resizeRippleCanvas();
+    rctx.clearRect(0, 0, rippleCanvas.width, rippleCanvas.height);
+
+    var startTime = performance.now();
+
+    function drawFrame(now) {
+      var elapsed = now - startTime;
+      var t = Math.min(elapsed / DURATION, 1.0);
+
+      // easeOutCubic：起始快、末尾减速，模拟海浪扩散的自然衰减
+      var eased = 1 - Math.pow(1 - t, 3);
+      var r = eased * maxR;
+
+      // 清空上一帧 → 绘制实心圆（fill = 目标主题背景色）
+      rctx.clearRect(0, 0, rippleCanvas.width, rippleCanvas.height);
+      rctx.beginPath();
+      rctx.arc(cx, cy, Math.max(r, 0.5), 0, Math.PI * 2);
+      rctx.fillStyle = targetBg;
+      rctx.fill();
+
+      if (t < 1.0) {
+        requestAnimationFrame(drawFrame);
+      } else {
+        // 动画结束：圆已完全覆盖屏幕
+        // ① 先切换主题 → grid-canvas 下一帧读取新 data-theme 绘制新背景
+        // ② 双重 rAF 等待 grid-canvas 完成绘制
+        // ③ 再清除波纹画布，露出已更新的 grid-canvas
+        if (onDone) onDone();
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            rctx.clearRect(0, 0, rippleCanvas.width, rippleCanvas.height);
+          });
+        });
+      }
+    }
+
+    requestAnimationFrame(drawFrame);
+  }
+
+  /* ---- 点击：触发波纹 + 主题切换 ---- */
+  btn.addEventListener('click', function() {
+    if (isTransitioning) return;
+
+    springTarget = 1.0;
+    startSpring();
+    isTransitioning = true;
+
+    // ★ 计算按钮几何中心坐标（视口坐标）—— 波纹扩散圆心 ★
+    var rect = btn.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+
+    // ★ 目标主题 = 当前主题的反向 ★
+    var targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    // ★ 目标主题对应的背景色 ★
+    var targetBg = targetTheme === 'light' ? '#f0f0f5' : '#060b18';
+
+    // ★ 启动 Canvas 波纹动画：圆从按钮中心向外扩散填充全屏 ★
+    startRipple(cx, cy, targetBg, function() {
+      // 波纹动画完成（圆已覆盖全屏），更新主题数据
+      applyTheme(targetTheme);
+      isTransitioning = false;
+    });
+  });
+})();
+
+	/* ========================================
+	   BOOT LOADING SCREEN — 模拟系统引导序列
+	   - 流式逐行打印启动日志
+	   - 随机延迟模拟真实终端节奏
+	   - 底部进度条从 0% 递增到 100%
+	   - 完成后淡出滑走，DOM 彻底销毁
+	   ======================================== */
+	(function() {
+	  var bootScreen = document.getElementById('boot-screen');
+	  var logContainer = document.getElementById('boot-logs');
+	  var progressBar = document.getElementById('boot-progress-bar');
+	  var progressPct = document.getElementById('boot-progress-pct');
+
+	  /* ---- 启动日志条目（消息 + 类型） ---- */
+	  var bootLogs = [
+	    { msg: '[ BIOS ] v2.14.0 — MaoBing Systems (R) Boot Agent',            type: 'info' },
+	    { msg: '[ BIOS ] CPU detected: Intel(R) Core(TM) i9-13900K @ 5.80GHz', type: 'info' },
+	    { msg: '[ BIOS ] Memory check: 65536MB OK',                             type: 'info' },
+	    { msg: '[ BIOS ] Storage detected: NVMe SSD 2TB (Samsung 990 Pro)',     type: 'info' },
+	    { msg: '[ BIOS ] USB Controller: xHCI mode enabled, 12 ports',          type: 'info' },
+	    { msg: '[ BIOS ] TPM 2.0: secure boot verification passed',             type: 'info' },
+	    { msg: '[ BIOS ] Initializing PCI Express devices...',                  type: 'info' },
+	    { msg: '[ ACPI ] Possible power management issue on port 0x1F',         type: 'warn' },
+	    { msg: '[ BOOT ] Loading bootloader: systemd-boot v252.1',              type: 'info' },
+	    { msg: '[ BOOT ] Kernel image: linux-6.8.0-maobing-amd64',              type: 'info' },
+	    { msg: '[ BOOT ] Decompressing kernel .......................... [OK]',  type: 'info' },
+	    { msg: '[ KRNL ] Initializing cgroup v2 hierarchy',                     type: 'info' },
+	    { msg: '[ KRNL ] Mounting filesystem: ext4 on /dev/nvme0n1p2',          type: 'info' },
+	    { msg: '[ KRNL ] Loading kernel modules ........................ [OK]',  type: 'info' },
+	    { msg: '[ KRNL ] Starting udev device manager',                         type: 'info' },
+	    { msg: '[ KRNL ] Configuring loopback interface lo',                    type: 'info' },
+	    { msg: '[ KRNL ] Starting network services: SSH, HTTP, WS',             type: 'info' },
+	    { msg: '[ KRNL ] Initializing GPU compute pipeline — CUDA 12.4',        type: 'info' },
+	    { msg: '[ FS   ] fsck: /dev/nvme0n1p2 clean, 342188/6553600 files',     type: 'info' },
+	    { msg: '[ FS   ] Mounting /home .................................... [OK]', type: 'info' },
+	    { msg: '[ NET  ] DHCP lease acquired: 192.168.1.42/24',                 type: 'info' },
+	    { msg: '[ NET  ] DNS resolver: 1.1.1.1, 8.8.8.8',                      type: 'info' },
+	    { msg: '[ NET  ] Firewall rule #42: rate-limiting enabled on port 443', type: 'warn' },
+	    { msg: '[ SRV  ] Starting nginx 1.27.0 .......................... [OK]', type: 'info' },
+	    { msg: '[ SRV  ] Starting PostgreSQL 16.3 ....................... [OK]', type: 'info' },
+	    { msg: '[ SRV  ] Starting Redis 7.4 cache server ............... [OK]',  type: 'info' },
+	    { msg: '[ TLS  ] Certificate verification: Let\'s Encrypt R11 valid',   type: 'info' },
+	    { msg: '[ INIT ] Starting user-space daemons...',                       type: 'info' },
+	    { msg: '[ INIT ] Loading project: "MaoBing\'s Sanctuary"',              type: 'info' },
+	    { msg: '[ INIT ] Cache warming: 2048 assets preloaded',                 type: 'info' },
+	    { msg: '[SUCCESS] System Boot Complete. Welcome, maoBing.',             type: 'success' }
+	  ];
+
+	  /* ---- 总日志条数，用于计算进度百分比 ---- */
+	  var totalLogs = bootLogs.length;
+	  var currentIndex = 0;
+	  var progress = 0;
+	  var targetProgress = 0; // 目标进度值，progress 会用弹簧模型追赶它
+
+	  /* ---- 锁定 body 滚动，防止加载期间用户滚动 ---- */
+	  var prevOverflowX = document.body.style.overflowX || '';
+	  document.body.style.overflow = 'hidden';
+
+	  /* ---- 进度条动画（弹簧式追赶，数字平滑跳动） ---- */
+	  function updateProgressLoop() {
+	    // 弹簧追赶：每次逼近目标值的 12%
+	    progress += (targetProgress - progress) * 0.12;
+	    if (Math.abs(targetProgress - progress) < 0.3) {
+	      progress = targetProgress;
+	    }
+
+	    var pct = Math.round(progress);
+
+	    // 构造 20 格字符进度条：█ = 已加载  ░ = 未加载
+	    var filled = Math.round(pct / 5);
+	    var bar = '[';
+	    for (var i = 0; i < 20; i++) {
+	      bar += i < filled ? '█' : '░';
+	    }
+	    bar += ']';
+
+	    progressBar.textContent = bar;
+	    progressPct.textContent = pct + '%';
+
+	    if (progress < targetProgress || progress < 100) {
+	      requestAnimationFrame(updateProgressLoop);
+	    }
+	  }
+	  requestAnimationFrame(updateProgressLoop);
+
+	  /* ---- 打印一行启动日志到终端 ---- */
+	  function appendLog(log, callback) {
+	    var line = document.createElement('div');
+	    line.className = 'boot-log-line ' + (log.type || 'info');
+	    line.textContent = log.msg;
+	    logContainer.appendChild(line);
+
+	    // 自动滚动到底部
+	    logContainer.scrollTop = logContainer.scrollHeight;
+
+	    // 每打印一行更新目标进度（最后一行为 100%）
+	    currentIndex++;
+	    targetProgress = Math.round((currentIndex / totalLogs) * 100);
+
+	    /* 随机延迟：模拟真实终端有快有慢的打印节奏 */
+	    var baseDelay = 25;
+	    var jitter   = Math.random() * 50;
+	    var pause    = Math.random() < 0.05 ? 80 : 0;
+
+	    setTimeout(callback, baseDelay + jitter + pause);
+	  }
+
+	  /* ---- 顺序打印全部日志 ---- */
+	  function runBootSequence() {
+	    var i = 0;
+	    function next() {
+	      if (i >= bootLogs.length) {
+	        // 全部日志打印完毕，准备退出
+	        onBootComplete();
+	        return;
+	      }
+	      appendLog(bootLogs[i], function() {
+	        i++;
+	        next();
+	      });
+	    }
+	    next();
+	  }
+
+	  /* ---- 启动完毕：等待 500ms → 淡出退场 → 销毁 DOM ---- */
+	  function onBootComplete() {
+	    // 确保进度条显示 100%
+	    targetProgress = 100;
+
+	    setTimeout(function() {
+	      // 触发 CSS 退出动画（向上滑出 + 淡出）
+	      bootScreen.classList.add('exit');
+
+	      // 监听动画结束事件，彻底清理
+	      bootScreen.addEventListener('animationend', function cleanup() {
+	        bootScreen.removeEventListener('animationend', cleanup);
+
+	        // ★ 从 DOM 中彻底删除加载层节点，释放内存 ★
+	        if (bootScreen.parentNode) {
+	          bootScreen.parentNode.removeChild(bootScreen);
+	        }
+	        bootScreen = null;
+
+	        // ★ 恢复 body 滚动，让用户正常浏览主页面 ★
+	        document.body.style.overflow = '';
+	        document.body.style.overflowX = prevOverflowX || 'hidden';
+	      });
+	    }, 1000);
+	  }
+
+	  /* ---- 开始启动！ ---- */
+	  runBootSequence();
+	})();
+
+</script>
+</body>
+</html>
