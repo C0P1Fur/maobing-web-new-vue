@@ -2,7 +2,7 @@
   <div
     ref="widgetRef"
     class="like-widget"
-    :class="{ liked: hasLiked }"
+    :class="{ liked: hasLikedLocal }"
   >
     <Teleport to="body">
       <div class="like-tooltip" :class="{ visible: tooltipVisible }">给猫冰点个赞吧~</div>
@@ -10,9 +10,16 @@
     <button
       class="like-btn"
       :aria-label="'点赞 (' + likeCount + ')'"
-      @click="toggleLike"
+      :disabled="isLoading"
+      @click="handleLike"
     >
-      <svg class="like-icon" viewBox="0 0 24 24" :fill="hasLiked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Loading spinner -->
+      <svg v-if="isLoading" class="like-icon like-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32">
+          <animate attributeName="stroke-dashoffset" values="32;0" dur="0.8s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+      <svg v-else class="like-icon" viewBox="0 0 24 24" :fill="hasLikedLocal ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
       </svg>
     </button>
@@ -21,18 +28,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useLikeSync } from '@/composables/useLikeSync.js'
 
-const STORAGE_KEY_LIKED = 'maobing_has_liked'
-const STORAGE_KEY_COUNT = 'maobing_like_count'
+const { likeCount, isLoading, addLike, hasLikedLocal } = useLikeSync()
 
-const hasLiked = ref(false)
-const likeCount = ref(0)
 const displayCount = ref(0)
 const tooltipVisible = ref(false)
 const widgetRef = ref(null)
 let tooltipEl = null
 
+// Animate display count when likeCount changes from external source
+watch(likeCount, (val) => {
+  displayCount.value = val
+})
+
+function handleLike() {
+  if (isLoading.value) return
+  addLike()
+  displayCount.value = likeCount.value
+}
+
+// Tooltip mouse tracking
 function onMouseMove(e) {
   if (tooltipEl) {
     tooltipEl.style.left = e.clientX + 'px'
@@ -42,7 +59,6 @@ function onMouseMove(e) {
 
 function onMouseEnter() {
   tooltipVisible.value = true
-  // Capture tooltip element after Teleport renders it
   requestAnimationFrame(() => {
     tooltipEl = document.querySelector('.like-tooltip')
   })
@@ -53,27 +69,7 @@ function onMouseLeave() {
   tooltipEl = null
 }
 
-function animateCount() {
-  displayCount.value = likeCount.value
-}
-
-function toggleLike() {
-  hasLiked.value = true
-  likeCount.value += 1
-  animateCount()
-  saveState()
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY_LIKED, hasLiked.value ? '1' : '0')
-  localStorage.setItem(STORAGE_KEY_COUNT, String(likeCount.value))
-}
-
 onMounted(() => {
-  hasLiked.value = localStorage.getItem(STORAGE_KEY_LIKED) === '1'
-  likeCount.value = parseInt(localStorage.getItem(STORAGE_KEY_COUNT) || '0', 10) || 0
-  displayCount.value = likeCount.value
-
   const el = widgetRef.value
   if (el) {
     el.addEventListener('mousemove', onMouseMove)
@@ -138,11 +134,15 @@ onUnmounted(() => {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.like-btn:hover {
+.like-btn:disabled {
+  cursor: url('/src/cursor-default.png') 1 1, default;
+}
+
+.like-btn:hover:not(:disabled) {
   transform: scale(1.18);
 }
 
-.like-btn:active {
+.like-btn:active:not(:disabled) {
   transform: scale(0.85);
 }
 
@@ -151,6 +151,11 @@ onUnmounted(() => {
   height: 22px;
   color: #ff6b9d;
   transition: color var(--transition-fast), filter var(--transition-fast);
+}
+
+.like-spinner {
+  color: #ff6b9d;
+  opacity: 0.6;
 }
 
 .liked .like-icon {
