@@ -1,9 +1,8 @@
 <template>
   <a
+    ref="cardRef"
     class="friend-link-card"
-    :class="{ visible: isVisible }"
     :href="url"
-    :style="{ animationDelay: `${index * 0.1}s` }"
   >
     <div class="friend-link-name">{{ name }}</div>
     <div class="friend-link-desc">{{ desc }}</div>
@@ -12,12 +11,36 @@
 </template>
 
 <script setup>
-defineProps({
+import { gsap } from 'gsap'
+import { watch, ref } from 'vue'
+
+// 2. 用一个变量 props 接收属性
+const props = defineProps({
   name: { type: String, required: true },
   desc: { type: String, required: true },
   url: { type: String, required: true },
   index: { type: Number, required: true },
   isVisible: { type: Boolean, default: false },
+})
+
+const cardRef = ref(null)
+
+// 3. 监听 isVisible
+watch(() => props.isVisible, (value, oldValue) => {
+  if (value && !oldValue && cardRef.value) {
+    // 4. 初始化状态：让卡片先处于下方且透明（防止闪烁）
+    gsap.set(cardRef.value, { y: 160, opacity: 0})
+
+    // 5. 让 GSAP 直接控制 DOM 节点，使用 props.index 
+    gsap.to(cardRef.value, { 
+      y: 0,                   // 动画结束回到原位 0，不影响 CSS 的 hover
+      opacity: 1, 
+      duration: 2.5, 
+      delay: props.index * 0.1,
+      ease: "bounce.out",
+      clearProps: "transform", // 6. 💥 关键：动画结束后清除 transform 属性，把控制权还给 CSS 的 hover！
+    });
+  }
 })
 </script>
 
@@ -30,27 +53,21 @@ defineProps({
   background: var(--glass-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: all var(--transition-fast);
   cursor: url('/src/cursor-default.png') 1 1, pointer;
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-.friend-link-card.visible {
-  animation: cascadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  /* 7. 添加 transition 让 hover 位移也变得丝滑 */
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform 0.2s ease;
 }
 
 .friend-link-card:hover {
   border-color: var(--glass-border-hover);
   box-shadow: 0 4px 24px var(--royal-blue-glow);
-  transform: translateY(-4px);
+  transform: translateY(-4px) !important; /* 加 !important 确保完全压制潜在的剩余样式 */
 }
 
 .friend-link-card:hover .friend-link-arrow {
   transform: translateX(4px);
   color: var(--lemon-yellow);
 }
-
 .friend-link-name {
   font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 1rem;
@@ -58,7 +75,6 @@ defineProps({
   color: var(--text-primary);
   margin-bottom: 8px;
 }
-
 .friend-link-desc {
   font-size: 0.85rem;
   font-family: 'JetBrains Mono', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -66,7 +82,6 @@ defineProps({
   margin-bottom: 16px;
   line-height: 1.4;
 }
-
 .friend-link-arrow {
   font-family: var(--font-mono);
   font-size: 0.8rem;
