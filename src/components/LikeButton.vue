@@ -7,10 +7,11 @@
     <Teleport to="body">
       <div class="like-tooltip" :class="{ visible: tooltipVisible }">给猫冰点个赞吧~</div>
     </Teleport>
+    <span class="like-count" :key="displayCount">{{ displayCount }}</span>
     <button
       class="like-btn"
       :aria-label="'点赞 (' + likeCount + ')'"
-      :disabled="isLoading"
+      :disabled="isLoading || cooldown"
       @click="handleLike"
     >
       <!-- Loading spinner -->
@@ -19,11 +20,15 @@
           <animate attributeName="stroke-dashoffset" values="32;0" dur="0.8s" repeatCount="indefinite" />
         </circle>
       </svg>
-      <svg v-else class="like-icon" viewBox="0 0 24 24" :fill="hasLikedLocal ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-      </svg>
+      <span v-else class="heart-wrapper">
+        <svg class="like-icon heart-base" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+        <svg v-if="wiping" class="like-icon heart-wipe" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" @animationend="onWipeEnd">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </span>
     </button>
-    <span class="like-count" :key="displayCount">{{ displayCount }}</span>
   </div>
 </template>
 
@@ -38,15 +43,25 @@ const tooltipVisible = ref(false)
 const widgetRef = ref(null)
 let tooltipEl = null
 
+const cooldown = ref(false)
+const wiping = ref(false)
+
 // Animate display count when likeCount changes from external source
 watch(likeCount, (val) => {
   displayCount.value = val
 })
 
 function handleLike() {
-  if (isLoading.value) return
+  if (isLoading.value || cooldown.value) return
+  cooldown.value = true
   addLike()
   displayCount.value = likeCount.value
+  wiping.value = true
+}
+
+function onWipeEnd() {
+  wiping.value = false
+  cooldown.value = false
 }
 
 // Tooltip mouse tracking
@@ -146,11 +161,27 @@ onUnmounted(() => {
   transform: scale(0.85);
 }
 
+.heart-wrapper {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .like-icon {
   width: 22px;
   height: 22px;
   color: #ff6b9d;
   transition: color var(--transition-fast), filter var(--transition-fast);
+}
+
+.heart-wipe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: heartErase 1s linear forwards;
 }
 
 .like-spinner {
@@ -198,6 +229,11 @@ onUnmounted(() => {
   color: #e82a6a;
 }
 
+@keyframes heartErase {
+  0% { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(100% 0 0 0); }
+}
+
 @media (max-width: 768px) {
   .like-widget {
     bottom: 12px;
@@ -209,6 +245,7 @@ onUnmounted(() => {
     width: 30px;
     height: 30px;
   }
+  .heart-wrapper,
   .like-icon {
     width: 18px;
     height: 18px;
