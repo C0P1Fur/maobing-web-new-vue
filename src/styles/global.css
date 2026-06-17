@@ -37,6 +37,7 @@ html {
   scroll-snap-type: y mandatory;
   overscroll-behavior-y: contain;
   font-size: 16px;
+  scrollbar-width: none;
 }
 
 body {
@@ -56,11 +57,6 @@ html.cursor-pressed,
 html.cursor-pressed * {
   cursor: url('/src/cursor-pressed.png') 1 1, auto !important;
 }
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-deep); }
-::-webkit-scrollbar-thumb { background: var(--royal-blue); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--lemon-yellow); }
 
 ::selection {
   background: var(--royal-blue);
